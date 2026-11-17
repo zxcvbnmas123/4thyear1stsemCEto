@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steel Design — Study & Problem-Solving Tracker</title>
+  <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=91IcwPeogXviAnR4iNPn78E656CMkOIklKfOadgWQssKFrgwzQPHU1vRyJE2IG5rB9O_sXlur1EOq0QJsxtpn5GvkiXEyPG9zmd1bQpSPf-3hmbMEPwPUcrkU4TkWxPX2lRjQ-C-eRnS0S2U_b1JFvawFfS5csHZcbhhG6UNSOnrT4uvTVzvZTVC5iaHYY4kAv35FPYQpKkYRiGHnGwtoHH9-kaVu81QYwxq5vUNCvrfOmQzV0iF77Foh4oFgPTJGlpyJahPeo95E0bvQX6znPXXOW10uCsbZtwhry_6DjmqMYn9ftrKxV1j6-HcExlAjZOvXbElCdF9UywGM8CTtHQmJZoCiRx4gf-3k5kI1h4" charset="UTF-8"></script><script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #FAF9F6;
+      color: #1E293B;
+      font-size: 16px;
+    }
+
+    /* Palette:
+       Sky Blue:   #63B0F2
+       Sunshine:   #F2CA46
+       Emerald:    #4CB07A
+       Blush Pink: #EEB6C1
+       Periwinkle: #8B93F5
+       Warm Amber: #EB9E57
+       Teal Mint:  #2DD4BF
+    */
+
+    .pill-select {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      font-weight: 700;
+      border-radius: 9999px;
+      padding: 0.48rem 1rem;
+      font-size: 0.94rem;
+      text-align: center;
+      text-align-last: center;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+      width: 100%;
+    }
+    .pill-select:hover {
+      filter: brightness(0.95);
+      transform: translateY(-1px);
+    }
+
+    /* Status & Subcheck Colors */
+    .st-completed, .st-done {
+      background-color: #4CB07A;
+      color: #ffffff;
+      border: 2px solid #3D9968;
+    }
+    .st-in-progress, .st-reviewing {
+      background-color: #F2CA46;
+      color: #3B2E04;
+      border: 2px solid #DFB52D;
+    }
+    .st-not-started, .st-pending {
+      background-color: #EEB6C1;
+      color: #4A1925;
+      border: 2px solid #DF9AA8;
+    }
+
+    /* Priority Pills */
+    .prio-high {
+      background-color: #EB9E57;
+      color: #3D1F05;
+      border: 2px solid #D98940;
+    }
+    .prio-medium {
+      background-color: #8B93F5;
+      color: #ffffff;
+      border: 2px solid #747CE3;
+    }
+    .prio-low {
+      background-color: #63B0F2;
+      color: #0D2D4A;
+      border: 2px solid #4B9CE3;
+    }
+
+    /* Stepper Button Styling (Section 2 Table - Generous Hit Area) */
+    .step-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 26px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s ease, filter 0.1s ease;
+    }
+    .step-btn:hover {
+      filter: brightness(0.92);
+    }
+    .step-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* Inline Horizontal Pill Counter Buttons (Inside Section 1 Cards - Spacious & Uncompressed) */
+    .inline-step-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 9999px;
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+      transition: transform 0.1s ease, filter 0.1s ease;
+    }
+    .inline-step-btn:hover {
+      filter: brightness(0.92);
+    }
+    .inline-step-btn:active {
+      transform: scale(0.9);
+    }
+
+    /* Draggable Exam Widget Styling */
+    #examWidget {
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    #examWidget.dragging {
+      cursor: grabbing;
+      box-shadow: 0 25px 35px -5px rgba(14, 165, 233, 0.45), 0 10px 15px -6px rgba(0, 0, 0, 0.25);
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- DRAGGABLE / MOVABLE & PINNED EXAM DATE + LIVE COUNTDOWN WIDGET -->
+  <aside id="examWidget" aria-label="Draggable Exam Countdown" style="top: 66px; left: 16px;" class="fixed z-50 w-[235px] sm:w-[250px] bg-[#E0F2FE]/95 backdrop-blur-md text-[#0C4A6E] rounded-2xl border-4 border-white px-4 py-3.5 shadow-2xl ring-4 ring-[#63B0F2]/60 transition-transform duration-100">
+    <!-- Top Drag Bar & Reset Position Button -->
+    <div class="flex items-center justify-between gap-2 pb-1.5 mb-1.5 border-b border-[#BAE6FD]">
+      <div class="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-[#0369A1]">
+        <span class="text-sm leading-none">⋮⋮</span>
+        <span>Drag to Move</span>
+      </div>
+      <button type="button" id="resetWidgetPosBtn" onclick="resetWidgetPosition(event)" title="Snap back to top-left" class="text-[10px] font-bold bg-white/80 hover:bg-white text-[#0369A1] px-2 py-0.5 rounded border border-[#7DD3FC] cursor-pointer">
+        Reset Pos
+      </button>
+    </div>
+
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-[11px] font-black uppercase tracking-widest bg-[#63B0F2] text-[#082F49] px-2 py-0.5 rounded-md">EXAM DATE</span>
+      <span class="text-[11px] font-extrabold text-[#0369A1]">4:00 – 7:00 PM</span>
+    </div>
+    <div class="text-lg font-black text-[#082F49] leading-tight mt-1">November 28, 2026</div>
+    
+    <!-- Live Real-Time Countdown: Days, Hours, Minutes, Seconds Left -->
+    <div class="mt-2.5 pt-2 border-t border-[#7DD3FC]">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#0369A1]">Time Left:</span>
+        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[#0284C7]">
+          <span class="w-2 h-2 rounded-full bg-[#4CB07A] animate-ping"></span> LIVE
+        </span>
+      </div>
+      <div id="examCountdown" class="grid grid-cols-4 gap-1.5 font-mono font-black text-center text-[#082F49]">
+        <div class="bg-white py-1.5 rounded-lg shadow-sm border border-[#BAE6FD]">
+          <div id="cdDays" class="text-sm sm:text-base leading-none">--</div>
+          <div class="text-[9px] font-bold text-[#0369A1] uppercase mt-0.5">Days</div>
+        </div>
+        <div class="bg-white py-1.5 rounded-lg shadow-sm border border-[#BAE6FD]">
+          <div id="cdHours" class="text-sm sm:text-base leading-none">--</div>
+          <div class="text-[9px] font-bold text-[#0369A1] uppercase mt-0.5">Hrs</div>
+        </div>
+        <div class="bg-white py-1.5 rounded-lg shadow-sm border border-[#BAE6FD]">
+          <div id="cdMins" class="text-sm sm:text-base leading-none">--</div>
+          <div class="text-[9px] font-bold text-[#0369A1] uppercase mt-0.5">Min</div>
+        </div>
+        <div class="bg-white py-1.5 rounded-lg shadow-sm border border-[#BAE6FD]">
+          <div id="cdSecs" class="text-sm sm:text-base leading-none text-[#0284C7]">--</div>
+          <div class="text-[9px] font-bold text-[#0369A1] uppercase mt-0.5">Sec</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- TOPMOST LIVE DATE & TIME BAR -->
+  <div class="bg-[#1E293B] text-white border-b-4 border-[#F2CA46] sticky top-0 z-40">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-8 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 text-sm sm:text-base font-bold tracking-wide text-[#F2CA46]">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#4CB07A] animate-pulse"></span>
+        <span id="liveDate">Loading Date...</span>
+      </div>
+      <div id="liveTime" class="text-base sm:text-lg font-extrabold font-mono tracking-wider text-[#63B0F2]">
+        00:00:00 AM
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN HEADER BANNER (Expanded max-w-[1600px] for generous horizontal breathing room) -->
+  <header class="bg-gradient-to-r from-[#63B0F2] via-[#8B93F5] to-[#EEB6C1] text-[#1E293B] shadow-md pt-44 sm:pt-40 lg:pt-7">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-8 lg:pl-[280px] py-6 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-[#1E293B]">
+          STEEL DESIGN — STUDY & PROBLEM TRACKER
+        </h1>
+        <p class="text-[#1E293B]/90 text-sm sm:text-base font-medium mt-1.5">
+          Track topic subchecks, adjust solved problem counts directly inside each topic or in the summary table, and monitor exam prep.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button type="button" onclick="exportCSV()" class="bg-[#4CB07A] hover:brightness-95 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow transition">
+          Export CSV
+        </button>
+        <button type="button" onclick="exportJSON()" class="bg-[#1E293B] hover:bg-slate-800 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow transition">
+          Save Backup
+        </button>
+        <label class="bg-white hover:bg-slate-100 text-[#1E293B] text-sm font-bold px-4 py-2.5 rounded-xl shadow cursor-pointer transition">
+          Load Backup
+          <input type="file" id="importInput" accept=".json" class="hidden" onchange="importJSON(event)" />
+        </label>
+        <button type="button" onclick="resetAll()" class="bg-[#EB9E57] hover:brightness-95 text-[#2D1602] text-sm font-bold px-4 py-2.5 rounded-xl shadow transition">
+          Reset
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT (Expanded max-w-[1600px] so cards, pills, and tables never feel tight or compressed) -->
+  <main class="max-w-[1600px] mx-auto px-4 sm:px-8 lg:pl-[280px] mt-8 space-y-10">
+
+    <!-- 6 COLORFUL KPI CARDS -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div class="bg-[#63B0F2] rounded-2xl p-5 sm:p-6 shadow-sm border-2 border-[#4B9CE3] text-[#0D2D4A]">
+        <div class="text-sm font-extrabold uppercase tracking-wider opacity-85">Total Topics</div>
+        <div id="kpiTotalTopics" class="text-4xl font-black mt-1.5">7</div>
+      </div>
+      <div class="bg-[#4CB07A] rounded-2xl p-5 sm:p-6 shadow-sm border-2 border-[#3D9968] text-white">
+        <div class="text-sm font-extrabold uppercase tracking-wider opacity-90">Topics Completed</div>
+        <div id="kpiCompletedTopics" class="text-4xl font-black mt-1.5">0</div>
+      </div>
+      <div class="bg-[#F2CA46] rounded-2xl p-5 sm:p-6 shadow-sm border-2 border-[#DFB52D] text-[#3B2E04]">
+        <div class="text-sm font-extrabold uppercase tracking-wider opacity-85">Avg Topic Progress</div>
+        <div id="kpiAvgProgress" class="text-4xl font-black mt-1.5">0.0%</div>
+      </div>
+      <div class="bg-[#8B93F5] rounded-2xl p-5 sm:p-6 shadow-sm border-2 border-[#747CE3] text-white">
+        <div class="text-sm font-extrabold uppercase tracking-wider opacity-90">Total Problems Solved</div>
+        <div id="kpiTotalSolved" class="text-4xl font-black mt-1.5">0</div>
+      </div>
+      <div class="bg-[#EB9E57] rounded-2xl p-5 sm:p-6 shadow-sm border-2 border-[#D98940] text-[#3D1F05]">
+        <div class="text-sm font-extrabold uppercase tracking-wider opacity-85">Gillesania Problems Solved</div>
+        <div id="kpiGillesaniaSolved" class="text-4xl font-black mt-1.5">0</div>
+      </div>
+      <div class="bg-[#EEB6C1] rounded-2xl p-5 sm:p-6 shadow-sm border-2 border-[#DF9AA8] text-[#4A1925]">
+        <div class="text-sm font-extrabold uppercase tracking-wider opacity-85">Gemini / Claude AI Solved</div>
+        <div id="kpiAiSolved" class="text-4xl font-black mt-1.5">0</div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: TOPIC MASTERY & SUBCHECK CARDS (SPACIOUS & UNCOMPRESSED) -->
+    <section class="space-y-5">
+      <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-[#8B93F5]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-black text-[#1E293B]">1. Topic Mastery, Subchecks & Per-Topic Counter</h2>
+          <p class="text-sm sm:text-base text-slate-600 mt-1">Update all 5 subchecks and use the spacious <strong>− / +</strong> source cards inside each topic (synced live with Section 2).</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <label for="dashStatusFilter" class="text-base font-bold text-slate-700">Filter:</label>
+          <select id="dashStatusFilter" onchange="renderDashboard()" class="border-2 border-[#8B93F5] rounded-xl px-4 py-2.5 bg-white text-base font-bold text-[#1E293B]">
+            <option value="ALL">All Topics (7)</option>
+            <option value="Not Started">Not Started</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Reviewing">Reviewing</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Topic Cards Container -->
+      <div id="topicCardsContainer" class="space-y-6"></div>
+
+      <!-- Overall Summary Footer Card -->
+      <div id="topicSummaryCard" class="bg-[#1E293B] text-white rounded-2xl p-6 shadow-md grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-5 text-center"></div>
+    </section>
+
+    <!-- SECTION 2: FULL TABLE COPY OF PROBLEM-SOLVING COUNTER BY TOPIC & SOURCE + CHART -->
+    <section class="space-y-5 pt-2">
+      <div class="bg-white rounded-2xl p-6 shadow-sm border-2 border-[#4CB07A]/40">
+        <h2 class="text-xl sm:text-2xl font-black text-[#1E293B]">2. Problem-Solving Counter by Topic & Source</h2>
+        <p class="text-sm sm:text-base text-slate-600 mt-1">Master table overview — click <strong>▲</strong> or <strong>▼</strong> in any column (including <strong>Prev. Exams</strong> before <strong>Other</strong>) to update counts.</p>
+      </div>
+
+      <!-- Spacious Direct Up/Down Stepper Counter Table -->
+      <div class="bg-white rounded-2xl shadow-sm border-2 border-slate-200 overflow-x-auto">
+        <table class="w-full min-w-[780px] text-left border-collapse">
+          <thead>
+            <tr class="bg-[#1E293B] text-white text-xs sm:text-sm uppercase tracking-wider">
+              <th class="py-4 px-5 min-w-[240px]">Study Topic</th>
+              <th class="py-4 px-3 text-center bg-[#63B0F2] text-[#0D2D4A] w-[96px]">PPT</th>
+              <th class="py-4 px-3 text-center bg-[#EB9E57] text-[#3D1F05] w-[96px]">Gill.</th>
+              <th class="py-4 px-3 text-center bg-[#8B93F5] text-white w-[96px]">AI</th>
+              <th class="py-4 px-3 text-center bg-[#2DD4BF] text-[#042F2E] w-[118px]">Prev. Exams</th>
+              <th class="py-4 px-3 text-center bg-[#EEB6C1] text-[#4A1925] w-[96px]">Other</th>
+              <th class="py-4 px-4 text-center bg-[#4CB07A] text-white w-[105px]">Solved</th>
+              <th class="py-4 px-3 text-center bg-[#F2CA46] text-[#3B2E04] w-[96px]">Review</th>
+            </tr>
+          </thead>
+          <tbody id="counterBody" class="divide-y divide-slate-200 text-sm sm:text-base"></tbody>
+          <tfoot id="counterFoot" class="bg-slate-100 font-black text-[#1E293B] border-t-2 border-[#1E293B] text-sm sm:text-base"></tfoot>
+        </table>
+      </div>
+
+      <!-- Stacked Bar Chart Card Below Table -->
+      <div class="bg-white rounded-2xl shadow-sm border-2 border-slate-200 p-6 sm:p-7">
+        <h3 class="text-lg sm:text-xl font-black text-[#1E293B] mb-1">Problems Solved per Topic by Source</h3>
+        <p class="text-sm sm:text-base text-slate-600 mb-5">Updates automatically whenever you change counts in Section 1 or Section 2</p>
+        <div class="relative h-[360px] w-full">
+          <canvas id="sourceChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // DRAGGABLE EXAM WIDGET (Mouse + Touch Support + Saved Position)
+    // =========================================================================
+    const WIDGET_POS_KEY = 'steel_design_exam_widget_pos_v1';
+    const examWidget = document.getElementById('examWidget');
+
+    function clampWidgetPosition(left, top) {
+      const rect = examWidget.getBoundingClientRect();
+      const maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+      const maxTop = Math.max(52, window.innerHeight - rect.height - 8);
+      return {
+        left: Math.min(Math.max(8, left), maxLeft),
+        top: Math.min(Math.max(52, top), maxTop)
+      };
+    }
+
+    function applyWidgetPosition(left, top) {
+      const clamped = clampWidgetPosition(left, top);
+      examWidget.style.left = clamped.left + 'px';
+      examWidget.style.top = clamped.top + 'px';
+      return clamped;
+    }
+
+    function resetWidgetPosition(e) {
+      if (e) e.stopPropagation();
+      const pos = applyWidgetPosition(16, 66);
+      try {
+        localStorage.setItem(WIDGET_POS_KEY, JSON.stringify(pos));
+      } catch (err) {}
+    }
+
+    try {
+      const savedPos = JSON.parse(localStorage.getItem(WIDGET_POS_KEY));
+      if (savedPos && typeof savedPos.left === 'number' && typeof savedPos.top === 'number') {
+        applyWidgetPosition(savedPos.left, savedPos.top);
+      }
+    } catch (e) {}
+
+    window.addEventListener('resize', () => {
+      const rect = examWidget.getBoundingClientRect();
+      applyWidgetPosition(rect.left, rect.top);
+    });
+
+    (function initDraggableWidget() {
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let initialLeft = 16;
+      let initialTop = 66;
+
+      function onPointerDown(e) {
+        if (e.target && e.target.closest('button')) return;
+        isDragging = true;
+        examWidget.classList.add('dragging');
+        const rect = examWidget.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+        startX = e.clientX;
+        startY = e.clientY;
+        if (examWidget.setPointerCapture && e.pointerId !== undefined) {
+          examWidget.setPointerCapture(e.pointerId);
+        }
+      }
+
+      function onPointerMove(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        applyWidgetPosition(initialLeft + dx, initialTop + dy);
+      }
+
+      function onPointerUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        examWidget.classList.remove('dragging');
+        if (examWidget.releasePointerCapture && e.pointerId !== undefined) {
+          try { examWidget.releasePointerCapture(e.pointerId); } catch (err) {}
+        }
+        const rect = examWidget.getBoundingClientRect();
+        try {
+          localStorage.setItem(WIDGET_POS_KEY, JSON.stringify({ left: rect.left, top: rect.top }));
+        } catch (err) {}
+      }
+
+      examWidget.addEventListener('pointerdown', onPointerDown);
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    })();
+
+    // =========================================================================
+    // LIVE CLOCK, DATE & EXAM COUNTDOWN UPDATER (Runs every second)
+    // =========================================================================
+    const EXAM_TARGET = new Date(2026, 10, 28, 16, 0, 0);
+
+    function updateClockAndCountdown() {
+      const now = new Date();
+      const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+      const dateEl = document.getElementById('liveDate');
+      const timeEl = document.getElementById('liveTime');
+      if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', dateOptions);
+      if (timeEl) timeEl.textContent = now.toLocaleTimeString('en-US', timeOptions);
+
+      const diffMs = EXAM_TARGET.getTime() - now.getTime();
+      const cdBox = document.getElementById('examCountdown');
+      if (cdBox) {
+        if (diffMs <= 0) {
+          cdBox.className = 'block';
+          cdBox.innerHTML = '<div class="bg-[#4CB07A] text-white text-center text-xs font-black py-1.5 px-2 rounded-lg">Exam Day / Completed!</div>';
+        } else {
+          const totalSecs = Math.floor(diffMs / 1000);
+          const days = Math.floor(totalSecs / (3600 * 24));
+          const hours = Math.floor((totalSecs % (3600 * 24)) / 3600);
+          const mins = Math.floor((totalSecs % 3600) / 60);
+          const secs = totalSecs % 60;
+
+          const dEl = document.getElementById('cdDays');
+          const hEl = document.getElementById('cdHours');
+          const mEl = document.getElementById('cdMins');
+          const sEl = document.getElementById('cdSecs');
+          if (dEl) dEl.textContent = String(days);
+          if (hEl) hEl.textContent = String(hours).padStart(2, '0');
+          if (mEl) mEl.textContent = String(mins).padStart(2, '0');
+          if (sEl) sEl.textContent = String(secs).padStart(2, '0');
+        }
+      }
+    }
+    updateClockAndCountdown();
+    setInterval(updateClockAndCountdown, 1000);
+
+    // =========================================================================
+    // TRACKER DATA & STATE (Includes Past Exams source counter before Other)
+    // =========================================================================
+    const STORAGE_KEY = 'steel_design_tracker_stepper_v1';
+
+    const DEFAULT_STATE = {
+      topics: [
+        { id: 'T-01', name: 'Course Orientation', priority: 'High', targetDate: '', status: 'Not Started', sub1: 'Pending', sub2: 'Pending', sub3: 'Pending', sub4: 'Pending', sub5: 'Pending', notes: '', ppt: 0, gill: 0, ai: 0, pastExam: 0, other: 0, review: 0 },
+        { id: 'T-02', name: 'Intro to Steel Design', priority: 'High', targetDate: '', status: 'Not Started', sub1: 'Pending', sub2: 'Pending', sub3: 'Pending', sub4: 'Pending', sub5: 'Pending', notes: '', ppt: 1, gill: 0, ai: 0, pastExam: 0, other: 0, review: 0 },
+        { id: 'T-03', name: 'Design of Tension Members - Part 1', priority: 'High', targetDate: '', status: 'Not Started', sub1: 'Pending', sub2: 'Pending', sub3: 'Pending', sub4: 'Pending', sub5: 'Pending', notes: '', ppt: 0, gill: 1, ai: 0, pastExam: 0, other: 0, review: 1 },
+        { id: 'T-04', name: 'Design of Tension Members - Part 2', priority: 'High', targetDate: '', status: 'Not Started', sub1: 'Pending', sub2: 'Pending', sub3: 'Pending', sub4: 'Pending', sub5: 'Pending', notes: '', ppt: 0, gill: 0, ai: 0, pastExam: 0, other: 0, review: 0 },
+        { id: 'T-05', name: 'Design of Compression Members', priority: 'High', targetDate: '', status: 'Not Started', sub1: 'Pending', sub2: 'Pending', sub3: 'Pending', sub4: 'Pending', sub5: 'Pending', notes: '', ppt: 0, gill: 0, ai: 0, pastExam: 0, other: 0, review: 0 },
+        { id: 'T-06', name: 'Design of Flexural Members - Part 1', priority: 'High', targetDate: '', status: 'Not Started', sub1: 'Pending', sub2: 'Pending', sub3: 'Pending', sub4: 'Pending', sub5: 'Pending', notes: '', ppt: 0, gill: 0, ai: 0, pastExam: 0, other: 0, review: 0 },
+        { id: 'T-07', name: 'Design of Flexural Members - Part 2', priority: 'High', targetDate: '', status: 'Not Started', sub1: 'Pending', sub2: 'Pending', sub3: 'Pending', sub4: 'Pending', sub5: 'Pending', notes: '', ppt: 0, gill: 0, ai: 0, pastExam: 0, other: 0, review: 0 }
+      ]
+    };
+
+    let state = null;
+    try {
+      const savedRaw = localStorage.getItem(STORAGE_KEY);
+      if (savedRaw) state = JSON.parse(savedRaw);
+    } catch (e) {
+      state = null;
+    }
+    if (!state || !Array.isArray(state.topics)) {
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    } else {
+      state.topics.forEach(t => {
+        if (!t.sub5) t.sub5 = 'Pending';
+        if (t.pastExam === undefined) t.pastExam = 0;
+      });
+    }
+
+    let sourceChart = null;
+
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    function pillClass(val) {
+      return 'st-' + String(val || 'pending').toLowerCase().replace(/\s+/g, '-');
+    }
+
+    function prioClass(val) {
+      return 'prio-' + String(val || 'high').toLowerCase();
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function changeCount(idx, field, delta) {
+      const current = Number(state.topics[idx][field]) || 0;
+      const next = Math.max(0, current + delta);
+      state.topics[idx][field] = next;
+      save();
+      renderDashboard();
+    }
+
+    // Spacious Vertical ▲ / ▼ cell for Section 2 Table
+    function renderStepperCell(idx, field, val, accentBg) {
+      return '<td class="py-3.5 px-3 text-center">' +
+        '<div class="inline-flex flex-col items-center justify-center gap-1.5">' +
+          '<button type="button" onclick="changeCount(' + idx + ', \'' + field + '\', 1)" class="step-btn text-[#1E293B]" style="background-color:' + accentBg + ';" title="Increase">▲</button>' +
+          '<span class="font-black text-lg text-[#1E293B] leading-none py-0.5">' + val + '</span>' +
+          '<button type="button" onclick="changeCount(' + idx + ', \'' + field + '\', -1)" class="step-btn bg-slate-200 text-slate-700" title="Decrease">▼</button>' +
+        '</div>' +
+      '</td>';
+    }
+
+    // Stacked Source Counter Card (Title on top, − [count] + buttons below so text never overlaps)
+    function renderCardBadgeStepper(idx, field, label, val, dotColor, bgTint, borderTint) {
+      return '<div class="flex flex-col items-center justify-between gap-2.5 px-3.5 py-3 rounded-xl border-2" style="background-color:' + bgTint + '; border-color:' + borderTint + ';">' +
+        '<div class="flex items-center justify-center gap-1.5 w-full">' +
+          '<span class="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style="background-color:' + dotColor + ';"></span>' +
+          '<span class="text-xs sm:text-[13px] font-extrabold uppercase tracking-wider text-slate-800 text-center leading-tight">' + label + '</span>' +
+        '</div>' +
+        '<div class="flex items-center justify-center gap-3 w-full">' +
+          '<button type="button" onclick="changeCount(' + idx + ', \'' + field + '\', -1)" class="inline-step-btn bg-white text-slate-700 border border-slate-300 shadow-xs" title="Decrease ' + label + '">−</button>' +
+          '<span class="min-w-[28px] text-center font-black text-xl text-[#1E293B] leading-none">' + val + '</span>' +
+          '<button type="button" onclick="changeCount(' + idx + ', \'' + field + '\', 1)" class="inline-step-btn text-[#1E293B] shadow-xs" style="background-color:' + dotColor + ';" title="Increase ' + label + '">+</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderDashboard() {
+      const cardsContainer = document.getElementById('topicCardsContainer');
+      const summaryCard = document.getElementById('topicSummaryCard');
+      const counterBody = document.getElementById('counterBody');
+      const counterFoot = document.getElementById('counterFoot');
+      const filterStatus = document.getElementById('dashStatusFilter').value;
+
+      cardsContainer.innerHTML = '';
+      counterBody.innerHTML = '';
+
+      let completedTopics = 0;
+      let totalCompletionPct = 0;
+
+      let totPpt = 0, totGill = 0, totAi = 0, totPastExam = 0, totOther = 0, totSolvedAll = 0, totReview = 0;
+
+      const chartLabels = [];
+      const arrPpt = [], arrGill = [], arrAi = [], arrPastExam = [], arrOther = [];
+
+      const cardBorders = ['#63B0F2', '#F2CA46', '#4CB07A', '#EEB6C1', '#8B93F5', '#EB9E57', '#63B0F2'];
+
+      state.topics.forEach((t, idx) => {
+        const subs = [t.sub1, t.sub2, t.sub3, t.sub4, t.sub5 || 'Pending'];
+        const doneCnt = subs.filter(s => s === 'Done').length;
+        const pct = Math.round((doneCnt / 5) * 100);
+
+        if (t.status === 'Completed') completedTopics++;
+        totalCompletionPct += pct;
+
+        const cPpt = Number(t.ppt) || 0;
+        const cGill = Number(t.gill) || 0;
+        const cAi = Number(t.ai) || 0;
+        const cPastExam = Number(t.pastExam) || 0;
+        const cOther = Number(t.other) || 0;
+        const cReview = Number(t.review) || 0;
+        const cTotal = cPpt + cGill + cAi + cPastExam + cOther;
+
+        totPpt += cPpt;
+        totGill += cGill;
+        totAi += cAi;
+        totPastExam += cPastExam;
+        totOther += cOther;
+        totSolvedAll += cTotal;
+        totReview += cReview;
+
+        chartLabels.push(t.id + ': ' + t.name);
+        arrPpt.push(cPpt);
+        arrGill.push(cGill);
+        arrAi.push(cAi);
+        arrPastExam.push(cPastExam);
+        arrOther.push(cOther);
+
+        // 1. Render Vertical Topic Mastery Card (Wide, Uncompressed Grids)
+        if (filterStatus === 'ALL' || t.status === filterStatus) {
+          const borderHex = cardBorders[idx % cardBorders.length];
+          const card = document.createElement('div');
+          card.className = 'bg-white rounded-2xl p-6 sm:p-7 shadow-sm border-l-8 border-y border-r border-slate-200 space-y-5';
+          card.style.borderLeftColor = borderHex;
+
+          const subDefs = [
+            { key: 'sub1', label: '1. Intro to Topic' },
+            { key: 'sub2', label: '2. Answered All PPT Problems' },
+            { key: 'sub3', label: '3. Answered Gillesania Problems' },
+            { key: 'sub4', label: '4. Answered Gemini/Claude AI' },
+            { key: 'sub5', label: '5. Answered Previous Exams' }
+          ];
+
+          const subHtml = subDefs.map(sc => {
+            const currentVal = t[sc.key] || 'Pending';
+            const opts = ['Pending', 'In Progress', 'Done'].map(s =>
+              '<option value="' + s + '"' + (currentVal === s ? ' selected' : '') + '>' + s + '</option>'
+            ).join('');
+            return '<div class="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col justify-between gap-3">' +
+              '<span class="text-sm sm:text-[15px] font-bold text-slate-700 leading-snug">' + sc.label + '</span>' +
+              '<select onchange="updateTopic(' + idx + ', \'' + sc.key + '\', this.value)" class="pill-select ' + pillClass(currentVal) + '">' + opts + '</select>' +
+            '</div>';
+          }).join('');
+
+          const prioOpts = ['High', 'Medium', 'Low'].map(p =>
+            '<option value="' + p + '"' + (t.priority === p ? ' selected' : '') + '>' + p + ' Priority</option>'
+          ).join('');
+
+          const statusOpts = ['Not Started', 'In Progress', 'Reviewing', 'Completed'].map(s =>
+            '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'
+          ).join('');
+
+          const barColor = pct === 100 ? '#4CB07A' : (pct >= 60 ? '#F2CA46' : '#63B0F2');
+
+          // Spacious 3-col on medium/lg, 6-col on 2xl so pills never squish
+          const cardCounterStrip =
+            '<div class="bg-slate-50/90 rounded-xl p-4 border border-slate-200/90">' +
+              '<div class="flex flex-wrap items-center justify-between gap-2 mb-3">' +
+                '<span class="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-600">Problem Counter (Synced with Table 2)</span>' +
+                '<span class="text-xs sm:text-sm font-extrabold text-[#2E7D52] bg-[#4CB07A]/15 px-3 py-1 rounded-full">Total Solved: ' + cTotal + '</span>' +
+              '</div>' +
+              '<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">' +
+                renderCardBadgeStepper(idx, 'ppt', 'PPT', cPpt, '#63B0F2', '#EFF6FF', '#BFDBFE') +
+                renderCardBadgeStepper(idx, 'gill', 'Gill.', cGill, '#EB9E57', '#FFF7ED', '#FED7AA') +
+                renderCardBadgeStepper(idx, 'ai', 'AI', cAi, '#8B93F5', '#EEF2FF', '#C7D2FE') +
+                renderCardBadgeStepper(idx, 'pastExam', 'Prev. Exams', cPastExam, '#2DD4BF', '#F0FDFA', '#99F6E4') +
+                renderCardBadgeStepper(idx, 'other', 'Other', cOther, '#EEB6C1', '#FDF2F8', '#FBCFE8') +
+                renderCardBadgeStepper(idx, 'review', 'Review', cReview, '#F2CA46', '#FEFCE8', '#FEF08A') +
+              '</div>' +
+            '</div>';
+
+          card.innerHTML =
+            '<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-100">' +
+              '<div class="flex flex-wrap items-center gap-3">' +
+                '<span class="px-3.5 py-1 rounded-lg font-black text-sm text-[#1E293B]" style="background-color: ' + borderHex + '40;">' + escapeHtml(t.id) + '</span>' +
+                '<h3 class="text-lg sm:text-xl font-black text-[#1E293B]">' + escapeHtml(t.name) + '</h3>' +
+              '</div>' +
+              '<div class="flex flex-wrap items-center gap-3">' +
+                '<div class="w-40">' +
+                  '<select onchange="updateTopic(' + idx + ', \'priority\', this.value)" class="pill-select ' + prioClass(t.priority) + '" title="Priority">' + prioOpts + '</select>' +
+                '</div>' +
+                '<div class="w-44">' +
+                  '<select onchange="updateTopic(' + idx + ', \'status\', this.value)" class="pill-select ' + pillClass(t.status) + '" title="Overall Status">' + statusOpts + '</select>' +
+                '</div>' +
+                '<div class="bg-[#8B93F5] text-white px-5 py-2 rounded-full font-black text-sm sm:text-base shadow-sm">' +
+                  'Solved: ' + cTotal +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4">' + subHtml + '</div>' +
+            cardCounterStrip +
+            '<div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-center pt-1">' +
+              '<div class="xl:col-span-4">' +
+                '<div class="flex justify-between text-sm font-extrabold text-slate-700 mb-1.5">' +
+                  '<span>Subchecks: ' + doneCnt + ' / 5</span>' +
+                  '<span>' + pct + '% Complete</span>' +
+                '</div>' +
+                '<div class="w-full bg-slate-200 rounded-full h-3.5 overflow-hidden">' +
+                  '<div class="h-3.5 rounded-full transition-all duration-300" style="width: ' + pct + '%; background-color: ' + barColor + ';"></div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="xl:col-span-3 flex items-center gap-2.5">' +
+                '<label class="text-sm font-bold text-slate-600 whitespace-nowrap">Target:</label>' +
+                '<input type="date" value="' + escapeHtml(t.targetDate) + '" onchange="updateTopic(' + idx + ', \'targetDate\', this.value)" class="w-full border-2 border-slate-200 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-700 bg-slate-50 focus:border-[#63B0F2] focus:outline-none" />' +
+              '</div>' +
+              '<div class="xl:col-span-5">' +
+                '<input type="text" value="' + escapeHtml(t.notes) + '" onchange="updateTopic(' + idx + ', \'notes\', this.value)" placeholder="Add notes or key formulas (e.g., Ae = U·An)..." class="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-sm sm:text-base bg-slate-50 focus:border-[#8B93F5] focus:bg-white focus:outline-none" />' +
+              '</div>' +
+            '</div>';
+
+          cardsContainer.appendChild(card);
+        }
+
+        // 2. Render Stepper Counter Table Row (Section 2 Table with spacious padding)
+        const tr2 = document.createElement('tr');
+        tr2.className = idx % 2 === 1 ? 'bg-slate-50/80' : 'bg-white';
+
+        tr2.innerHTML =
+          '<td class="py-3.5 px-5 font-bold text-[#1E293B]">' +
+            '<span class="inline-block font-black text-xs px-2.5 py-0.5 rounded mr-2" style="background-color: ' + cardBorders[idx] + '55;">' + escapeHtml(t.id) + '</span>' +
+            escapeHtml(t.name) +
+          '</td>' +
+          renderStepperCell(idx, 'ppt', cPpt, '#63B0F2') +
+          renderStepperCell(idx, 'gill', cGill, '#EB9E57') +
+          renderStepperCell(idx, 'ai', cAi, '#8B93F5') +
+          renderStepperCell(idx, 'pastExam', cPastExam, '#2DD4BF') +
+          renderStepperCell(idx, 'other', cOther, '#EEB6C1') +
+          '<td class="py-3.5 px-4 text-center font-black text-xl text-[#2E7D52] bg-[#4CB07A]/15">' + cTotal + '</td>' +
+          renderStepperCell(idx, 'review', cReview, '#F2CA46');
+
+        counterBody.appendChild(tr2);
+      });
+
+      const avgPct = (totalCompletionPct / state.topics.length).toFixed(1);
+
+      // Summary Footer Card (Includes all 5 subtopics)
+      summaryCard.innerHTML =
+        '<div><div class="text-xs uppercase text-slate-300 font-bold">Topics Done</div><div class="text-xl font-black text-[#4CB07A] mt-1">' + completedTopics + ' / 7</div></div>' +
+        '<div><div class="text-xs uppercase text-slate-300 font-bold">1. Intro Done</div><div class="text-xl font-black text-[#63B0F2] mt-1">' + state.topics.filter(t => t.sub1 === 'Done').length + ' / 7</div></div>' +
+        '<div><div class="text-xs uppercase text-slate-300 font-bold">2. PPT Done</div><div class="text-xl font-black text-[#F2CA46] mt-1">' + state.topics.filter(t => t.sub2 === 'Done').length + ' / 7</div></div>' +
+        '<div><div class="text-xs uppercase text-slate-300 font-bold">3. Gillesania</div><div class="text-xl font-black text-[#EB9E57] mt-1">' + state.topics.filter(t => t.sub3 === 'Done').length + ' / 7</div></div>' +
+        '<div><div class="text-xs uppercase text-slate-300 font-bold">4. AI Done</div><div class="text-xl font-black text-[#EEB6C1] mt-1">' + state.topics.filter(t => t.sub4 === 'Done').length + ' / 7</div></div>' +
+        '<div><div class="text-xs uppercase text-slate-300 font-bold">5. Prev Exams</div><div class="text-xl font-black text-[#2DD4BF] mt-1">' + state.topics.filter(t => t.sub5 === 'Done').length + ' / 7</div></div>' +
+        '<div><div class="text-xs uppercase text-slate-300 font-bold">Avg Progress</div><div class="text-xl font-black text-white mt-1">' + avgPct + '%</div></div>' +
+        '<div><div class="text-xs uppercase text-slate-300 font-bold">All Solved</div><div class="text-xl font-black text-[#8B93F5] mt-1">' + totSolvedAll + '</div></div>';
+
+      // Section 2 Table Footer
+      counterFoot.innerHTML =
+        '<tr>' +
+          '<td class="py-4 px-5">TOTAL (7 Topics)</td>' +
+          '<td class="py-4 px-3 text-center">' + totPpt + '</td>' +
+          '<td class="py-4 px-3 text-center">' + totGill + '</td>' +
+          '<td class="py-4 px-3 text-center">' + totAi + '</td>' +
+          '<td class="py-4 px-3 text-center">' + totPastExam + '</td>' +
+          '<td class="py-4 px-3 text-center">' + totOther + '</td>' +
+          '<td class="py-4 px-4 text-center text-xl text-[#2E7D52] bg-[#4CB07A]/20">' + totSolvedAll + '</td>' +
+          '<td class="py-4 px-3 text-center">' + totReview + '</td>' +
+        '</tr>';
+
+      // Update Top KPI Cards
+      document.getElementById('kpiTotalTopics').textContent = state.topics.length;
+      document.getElementById('kpiCompletedTopics').textContent = completedTopics;
+      document.getElementById('kpiAvgProgress').textContent = avgPct + '%';
+      document.getElementById('kpiTotalSolved').textContent = totSolvedAll;
+      document.getElementById('kpiGillesaniaSolved').textContent = totGill;
+      document.getElementById('kpiAiSolved').textContent = totAi;
+
+      renderChart(chartLabels, arrPpt, arrGill, arrAi, arrPastExam, arrOther);
+    }
+
+    function renderChart(labels, ppt, gill, ai, pastExam, other) {
+      const canvas = document.getElementById('sourceChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+      const ctx = canvas.getContext('2d');
+      if (sourceChart) sourceChart.destroy();
+      sourceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'PPT Lecture', data: ppt, backgroundColor: '#63B0F2', borderRadius: 4 },
+            { label: 'Gillesania Book', data: gill, backgroundColor: '#EB9E57', borderRadius: 4 },
+            { label: 'Gemini / Claude AI', data: ai, backgroundColor: '#8B93F5', borderRadius: 4 },
+            { label: 'Previous Exams', data: pastExam, backgroundColor: '#2DD4BF', borderRadius: 4 },
+            { label: 'Other', data: other, backgroundColor: '#EEB6C1', borderRadius: 4 }
+          ]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              stacked: true,
+              beginAtZero: true,
+              ticks: { stepSize: 1, font: { size: 13, weight: 'bold' } }
+            },
+            y: {
+              stacked: true,
+              ticks: { font: { size: 12, weight: 'bold' } }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 16, padding: 16, font: { size: 13, weight: 'bold' } }
+            }
+          }
+        }
+      });
+    }
+
+    function updateTopic(idx, field, val) {
+      state.topics[idx][field] = val;
+      if (['sub1', 'sub2', 'sub3', 'sub4', 'sub5'].includes(field)) {
+        const t = state.topics[idx];
+        const subs = [t.sub1, t.sub2, t.sub3, t.sub4, t.sub5 || 'Pending'];
+        if (subs.every(s => s === 'Done')) t.status = 'Completed';
+        else if (subs.some(s => s === 'Done' || s === 'In Progress') && t.status === 'Not Started') t.status = 'In Progress';
+      }
+      save();
+      renderDashboard();
+    }
+
+    function exportJSON() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Steel_Design_Study_Tracker_Backup.json';
+      a.click();
+    }
+
+    function importJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.topics) {
+            data.topics.forEach(t => {
+              if (!t.sub5) t.sub5 = 'Pending';
+              if (t.pastExam === undefined) t.pastExam = 0;
+            });
+            state = data;
+            save();
+            renderDashboard();
+            alert('Tracker backup restored!');
+          }
+        } catch (err) {
+          alert('Invalid backup file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function exportCSV() {
+      const headers = ['Topic ID', 'Study Topic', 'Priority', 'Status', '1. Intro', '2. PPT', '3. Gillesania', '4. AI', '5. Previous Exams', 'PPT Solved', 'Gillesania Solved', 'AI Solved', 'Past Exams Solved', 'Other Solved', 'Total Solved', 'Needs Review', 'Target Date', 'Notes'];
+      const rows = state.topics.map(t => {
+        const total = (Number(t.ppt) || 0) + (Number(t.gill) || 0) + (Number(t.ai) || 0) + (Number(t.pastExam) || 0) + (Number(t.other) || 0);
+        return [t.id, t.name, t.priority, t.status, t.sub1, t.sub2, t.sub3, t.sub4, t.sub5 || 'Pending', t.ppt || 0, t.gill || 0, t.ai || 0, t.pastExam || 0, t.other || 0, total, t.review || 0, t.targetDate, t.notes]
+          .map(v => '"' + String(v === undefined || v === null ? '' : v).replace(/"/g, '""') + '"').join(',');
+      });
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Steel_Design_Study_Progress.csv';
+      a.click();
+    }
+
+    function resetAll() {
+      if (confirm('Reset all topics and solved problem counters to default?')) {
+        state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        save();
+        renderDashboard();
+      }
+    }
+
+    // Initialize on load
+    save();
+    renderDashboard();
+  </script>
+</body>
+</html>
